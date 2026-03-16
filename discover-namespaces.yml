@@ -1,22 +1,5 @@
----
-# Inventario dinámico de Kubernetes/OpenShift para AAP.
-# Use este archivo como "Inventory source" en AAP para poder sincronizar y ver
-# namespaces, pods, etc. en el inventario. No use discover-namespaces.yml como
-# source: ese archivo es un playbook, no un inventario.
-#
-# IMPORTANTE - Versión de kubernetes.core:
-# El plugin k8s fue eliminado en kubernetes.core 6.0.0. Para que este inventario
-# funcione, la colección debe ser 5.x (en requirements.yml use version: ">=5.0.0,<6.0.0").
-# Si usa 6.x, solo podrá usar el playbook discover-namespaces.yml (no como source).
-#
-# La credencial de Kubernetes/OpenShift se configura en AAP en el Inventory Source;
-# si no se define connections, se usa ~/.kube/config o la que inyecte la credencial.
-
 plugin: kubernetes.core.k8s
-
-# Opcional: descomentar para limitar namespaces o definir conexión explícita.
-# connections:
-#   - {}   # usa default (kubeconfig/context de la credencial)
-#   # - namespaces: [ default, openshift-operators ]
-#   # - host: https://api.cluster.example.com:6443
-#   #   validate_certs: true
+connections:
+  - namespaces:
+      - estadisticas
+# Esto creará un grupo por cada namespace o etiqueta
