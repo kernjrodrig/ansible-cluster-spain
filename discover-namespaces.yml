@@ -1,72 +1,22 @@
 ---
-# Playbook de descubrimiento de namespaces en Kubernetes/OpenShift usando k8s_info.
-# Este playbook sustituye al inventario dinámico basado en el plugin eliminado kubernetes.core.k8s.
+# Inventario dinámico de Kubernetes/OpenShift para AAP.
+# Use este archivo como "Inventory source" en AAP para poder sincronizar y ver
+# namespaces, pods, etc. en el inventario. No use discover-namespaces.yml como
+# source: ese archivo es un playbook, no un inventario.
 #
-# Uso típico en AAP:
-# - Project: apuntar a este repositorio.
-# - Inventory: uno que tenga al menos localhost (por ejemplo, el Default).
-# - Credential: OpenShift/Kubernetes API (igual que la que usabas para el inventario).
-# - Playbook: discover-namespaces.yml
+# IMPORTANTE - Versión de kubernetes.core:
+# El plugin k8s fue eliminado en kubernetes.core 6.0.0. Para que este inventario
+# funcione, la colección debe ser 5.x (en requirements.yml use version: ">=5.0.0,<6.0.0").
+# Si usa 6.x, solo podrá usar el playbook discover-namespaces.yml (no como source).
 #
-# Flujo:
-# 1. Este play se ejecuta en localhost y consulta la API de K8s/OCP.
-# 2. Crea hosts dinámicos para cada namespace objetivo en el grupo "namespaces".
-# 3. Un segundo play (en el mismo fichero o en otro) puede usar "hosts: namespaces".
+# La credencial de Kubernetes/OpenShift se configura en AAP en el Inventory Source;
+# si no se define connections, se usa ~/.kube/config o la que inyecte la credencial.
 
-- name: Descubrir namespaces en el clúster
-  hosts: localhost
-  gather_facts: false
-  collections:
-    - kubernetes.core
+plugin: kubernetes.core.k8s
 
-  vars:
-    # Lista de namespaces objetivo. Si está vacía, se usarán todos los namespaces descubiertos.
-    target_namespaces: []
-
-  tasks:
-    - name: Obtener lista de namespaces
-      kubernetes.core.k8s_info:
-        api_version: v1
-        kind: Namespace
-      register: ns_info
-
-    - name: Determinar namespaces a usar
-      ansible.builtin.set_fact:
-        discovered_namespaces: >-
-          {{
-            ns_info.resources
-            | map(attribute='metadata.name')
-            | list
-          }}
-        effective_namespaces: >-
-          {{
-            (target_namespaces | length > 0)
-            | ternary(
-                discovered_namespaces | intersect(target_namespaces),
-                discovered_namespaces
-              )
-          }}
-
-    - name: Depurar namespaces descubiertos y efectivos
-      ansible.builtin.debug:
-        msg:
-          discovered_namespaces: "{{ discovered_namespaces }}"
-          effective_namespaces: "{{ effective_namespaces }}"
-
-    - name: Añadir namespaces como hosts dinámicos
-      ansible.builtin.add_host:
-        name: "ns_{{ item }}"
-        groups: namespaces
-        namespace: "{{ item }}"
-      loop: "{{ effective_namespaces }}"
-
-# Ejemplo de segundo play (puede estar en este mismo fichero o en otro):
-#
-# - name: Operar sobre los namespaces descubiertos
-#   hosts: namespaces
-#   gather_facts: false
-#   tasks:
-#     - name: Mostrar namespace actual
-#       ansible.builtin.debug:
-#         msg: "Trabajando sobre el namespace {{ hostvars[inventory_hostname].namespace }}"
-
+# Opcional: descomentar para limitar namespaces o definir conexión explícita.
+# connections:
+#   - {}   # usa default (kubeconfig/context de la credencial)
+#   # - namespaces: [ default, openshift-operators ]
+#   # - host: https://api.cluster.example.com:6443
+#   #   validate_certs: true
