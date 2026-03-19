@@ -1,0 +1,104 @@
+---
+- name: Desplegar Nginx "Bienvenidos a Guzdan" en OpenShift
+  hosts: localhost
+  connection: local
+  vars:
+    namespace: "guzdan-nginx-web" # Cambia esto por tu namespace/proyecto
+    app_name: "guzdan-web"
+    image_name: "nginxinc/nginx-unprivileged:stable-alpine" # Versión segura para OpenShift
+
+  tasks:
+    - name: Crear ConfigMap con el contenido HTML
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: "{{ app_name }}-html"
+            namespace: "{{ namespace }}"
+          data:
+            index.html: |
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <style>
+                  body { font-family: sans-serif; display: flex; justify-content: center; 
+                         align-items: center; height: 100vh; margin: 0; background: #f0f2f5; }
+                  .card { padding: 2rem; background: white; border-radius: 8px; 
+                          box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+                  h1 { color: #2d333a; }
+                </style>
+              </head>
+              <body>
+                <div class="card">
+                  <h1>Bienvenidos a Guzdan</h1>
+                  <p>Microservicio desplegado con Ansible</p>
+                </div>
+              </body>
+              </html>
+
+    - name: Crear Deployment de Nginx
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: "{{ app_name }}"
+            template:
+              metadata:
+                labels:
+                  app: "{{ app_name }}"
+              spec:
+                containers:
+                  - name: nginx
+                    image: "{{ image_name }}"
+                    ports:
+                      - containerPort: 8080
+                    volumeMounts:
+                      - name: html-volume
+                        mountPath: /usr/share/nginx/html
+                volumes:
+                  - name: html-volume
+                    configMap:
+                      name: "{{ app_name }}-html"
+
+    - name: Crear Servicio Interno
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+          spec:
+            selector:
+              app: "{{ app_name }}"
+            ports:
+              - protocol: TCP
+                port: 80
+                targetPort: 8080
+
+    - name: Crear Route de OpenShift (Exposición externa)
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: route.openshift.io/v1
+          kind: Route
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ namespace }}"
+          spec:
+            to:
+              kind: Service
+              name: "{{ app_name }}"
+            port:
+              targetPort: 8080

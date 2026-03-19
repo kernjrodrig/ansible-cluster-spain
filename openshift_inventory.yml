@@ -1,5 +1,5 @@
 plugin: kubernetes.core.k8s
 connections:
   - namespaces:
-      - estadisticas
+      - guzdan-nginx-web
 # Esto creará un grupo por cada namespace o etiqueta
