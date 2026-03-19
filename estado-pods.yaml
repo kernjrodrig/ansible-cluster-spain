@@ -1,0 +1,11 @@
+- name: Obtener estado de los Pods
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: "{{ namespace }}"
+      register: pod_list
+
+    - name: Mostrar pods que no están en ejecución
+      debug:
+        msg: "¡Atención! El pod {{ item.metadata.name }} está en estado {{ item.status.phase }}"
+      loop: "{{ pod_list.resources }}"
+      when: item.status.phase != "Running"

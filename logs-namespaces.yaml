@@ -1,0 +1,38 @@
+---
+- name: Extraer logs del proyecto Guzdan en OpenShift
+  hosts: localhost
+  connection: local
+  vars:
+    namespace: "guzdan-nginx-web"
+
+  tasks:
+    - name: 1. Obtener la lista de Pods en el namespace
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: "{{ namespace }}"
+      register: pods_info
+
+    - name: 2. Validar que existan Pods
+      fail:
+        msg: "No se encontraron Pods activos en el namespace {{ namespace }}."
+      when: pods_info.resources | length == 0
+
+    - name: 3. Extraer los logs de cada Pod
+      kubernetes.core.k8s_log:
+        name: "{{ item.metadata.name }}"
+        namespace: "{{ namespace }}"
+        # tail_lines: 100  # Descomenta esta línea si solo quieres las últimas 100 líneas
+      register: pod_logs
+      loop: "{{ pods_info.resources }}"
+      ignore_errors: yes # Evita que el playbook falle si un pod está reiniciándose
+
+    - name: 4. Guardar los logs en archivos de texto locales
+      copy:
+        content: "{{ item.log }}"
+        dest: "./{{ item.item.metadata.name }}-logs.txt"
+      loop: "{{ pod_logs.results }}"
+      when: item.log is defined and item.log != ""
+
+    - name: 5. Confirmación de extracción
+      debug:
+        msg: "¡Listo! Los logs se han guardado en tu directorio actual con el formato [nombre-del-pod]-logs.txt"
