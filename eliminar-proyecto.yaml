@@ -1,0 +1,20 @@
+---
+- name: Eliminar despliegue de Guzdan en OpenShift
+  hosts: localhost
+  connection: local
+  vars:
+    namespace: "guzdan-nginx-web"
+
+  tasks:
+    - name: Eliminar el Namespace (esto borra TODO lo que hay dentro)
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "{{ namespace }}"
+        state: absent
+        wait: yes # Espera a que el borrado termine por completo
+        wait_timeout: 300 # Tiempo máximo de espera (5 min)
+
+    - name: Confirmación de limpieza
+      debug:
+        msg: "El proyecto {{ namespace }} y todos sus recursos han sido eliminados correctamente."
