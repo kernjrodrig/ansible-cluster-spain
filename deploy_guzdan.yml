@@ -3,11 +3,18 @@
   hosts: localhost
   connection: local
   vars:
-    namespace: "guzdan-nginx-web" # Cambia esto por tu namespace/proyecto
+    namespace: "guzdan-nginx-web" # Asegúrate que coincida con tu error
     app_name: "guzdan-web"
-    image_name: "nginxinc/nginx-unprivileged:stable-alpine" # Versión segura para OpenShift
+    image_name: "nginxinc/nginx-unprivileged:stable-alpine"
 
   tasks:
+    - name: Crear el Namespace si no existe
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "{{ namespace }}"
+        state: present
+
     - name: Crear ConfigMap con el contenido HTML
       kubernetes.core.k8s:
         state: present
