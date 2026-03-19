@@ -1,9 +1,9 @@
 ---
-- name: Desplegar Nginx "Bienvenidos a Guzdan" en OpenShift
+- name: Desplegar Nginx "Bienvenidos a Guzdan" en OpenShift con HTTPS
   hosts: localhost
   connection: local
   vars:
-    namespace: "guzdan-nginx-web" # Asegúrate que coincida con tu error
+    namespace: "guzdan-nginx-web"
     app_name: "guzdan-web"
     image_name: "nginxinc/nginx-unprivileged:stable-alpine"
 
@@ -40,7 +40,7 @@
               <body>
                 <div class="card">
                   <h1>Bienvenidos a Guzdan</h1>
-                  <p>Microservicio desplegado con Ansible</p>
+                  <p>Microservicio con HTTPS habilitado</p>
                 </div>
               </body>
               </html>
@@ -94,7 +94,7 @@
                 port: 80
                 targetPort: 8080
 
-    - name: Crear Route de OpenShift (Exposición externa)
+    - name: Crear Route de OpenShift con HTTPS
       kubernetes.core.k8s:
         state: present
         definition:
@@ -109,3 +109,6 @@
               name: "{{ app_name }}"
             port:
               targetPort: 8080
+            tls:
+              termination: edge
+              insecureEdgeTerminationPolicy: Redirect
